@@ -121,16 +121,32 @@ open class PDFViewController: UIViewController {
         view.addSubview(pageScrubber)
         view.addSubview(annotationController.view)
         
-        collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
-        collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
-        collectionView.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
-        collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
-        
-        pageScrubber.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
-        pageScrubber.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
-        pageScrubber.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
-        pageScrubber.heightAnchor.constraint(equalToConstant: 44.0).isActive = true
-        
+        if #available(iOS 9.0, *) {
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+
+            pageScrubber.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+            pageScrubber.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+            pageScrubber.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+            pageScrubber.heightAnchor.constraint(equalToConstant: 44.0).isActive = true
+        } else {
+            collectionView.addConstraints([
+                NSLayoutConstraint(item: collectionView, attribute: .leading, relatedBy: .equal, toItem: view, attribute: .leadingMargin, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: collectionView, attribute: .trailing, relatedBy: .equal, toItem: view, attribute: .trailingMargin, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: collectionView, attribute: .top, relatedBy: .equal, toItem: topLayoutGuide, attribute: .bottom, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: collectionView, attribute: .bottom, relatedBy: .equal, toItem: bottomLayoutGuide, attribute: .top, multiplier: 1, constant: 0),
+                ])
+
+            pageScrubber.addConstraints([
+                NSLayoutConstraint(item: pageScrubber, attribute: .bottom, relatedBy: .equal, toItem: bottomLayoutGuide, attribute: .top, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: pageScrubber, attribute: .leading, relatedBy: .equal, toItem: view, attribute: .leadingMargin, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: pageScrubber, attribute: .trailing, relatedBy: .equal, toItem: view, attribute: .trailingMargin, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: pageScrubber, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1, constant: 44),
+                ])
+        }
+
         pageScrubber.sizeToFit()
         
         reloadBarButtons()
@@ -336,8 +352,14 @@ extension PDFViewController: PDFSinglePageViewerDelegate {
     
     public func singlePageViewer(_ collectionView: PDFSinglePageViewer, selected action: PDFAction) {
         if let action = action as? PDFActionURL {
-            let svc = SFSafariViewController(url: action.url as URL)
-            present(svc, animated: true, completion: nil)
+            if #available(iOS 9.0, *) {
+                let svc = SFSafariViewController(url: action.url as URL)
+                present(svc, animated: true, completion: nil)
+            } else {
+                // Fallback on earlier versions
+                let wkvc = WKWebViewController(url: action.url)
+                present(wkvc, animated: true, completion: nil)
+            }
         } else if let action = action as? PDFActionGoTo {
             collectionView.displayPage(action.pageIndex, animated: true)
         }
@@ -369,3 +391,37 @@ extension PDFViewController: PDFThumbnailViewControllerDelegate {
         self.dismiss(animated: true, completion: nil)
     }
 }
+
+// MARK: - WKWebViewController
+import WebKit
+
+final class WKWebViewController: UIViewController {
+
+    private let url: URL
+
+    init(url: URL) {
+        self.url = url
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        let config = WKWebViewConfiguration()
+        let webView = WKWebView(frame: view.bounds, configuration: config)
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(webView)
+        view.addConstraints([
+            NSLayoutConstraint(item: webView, attribute: .leading, relatedBy: .equal, toItem: view, attribute: .leading, multiplier: 1, constant: 0),
+            NSLayoutConstraint(item: webView, attribute: .trailing, relatedBy: .equal, toItem: view, attribute: .trailing, multiplier: 1, constant: 0),
+            NSLayoutConstraint(item: webView, attribute: .top, relatedBy: .equal, toItem: view, attribute: .top, multiplier: 1, constant: 0),
+            NSLayoutConstraint(item: webView, attribute: .bottom, relatedBy: .equal, toItem: view, attribute: .bottom, multiplier: 1, constant: 0),
+            ])
+        let request = URLRequest(url: url)
+        webView.load(request)
+    }
+}
+

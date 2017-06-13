@@ -61,10 +61,19 @@ open class PDFThumbnailViewController: UIViewController {
         collectionView.backgroundColor = UIColor.white
         collectionView.alwaysBounceVertical = true
         collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
-        collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
-        collectionView.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
-        collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+        if #available(iOS 9.0, *) {
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+        } else {
+            collectionView.addConstraints([
+                NSLayoutConstraint(item: collectionView, attribute: .leading, relatedBy: .equal, toItem: view, attribute: .leadingMargin, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: collectionView, attribute: .trailing, relatedBy: .equal, toItem: view, attribute: .trailingMargin, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: collectionView, attribute: .top, relatedBy: .equal, toItem: topLayoutGuide, attribute: .bottom, multiplier: 1, constant: 0),
+                NSLayoutConstraint(item: collectionView, attribute: .bottom, relatedBy: .equal, toItem: bottomLayoutGuide, attribute: .top, multiplier: 1, constant: 0),
+                ])
+        }
     }
     
     @IBAction func tappedDone() {
